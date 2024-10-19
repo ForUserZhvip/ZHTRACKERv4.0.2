@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZHTRACKER | Advanced Tools</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Playfair Display', serif;
+            background: linear-gradient(135deg, #0F2027, #203A43, #2C5364);
+            color: #FFD700;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1, h3 {
+            text-align: center;
+            text-shadow: 0 0 30px #FFD700, 0 0 60px #FFD700;
+        }
+
+        .container {
+            padding: 20px;
+            overflow-y: auto;
+            max-width: 800px;
+            margin: auto;
+            background-color: rgba(34, 34, 34, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.6);
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 15px;
+            margin: 5px 0;
+            border-radius: 8px;
+            background-color: #111;
+            border: 1px solid #FFD700;
+            color: #FFD700;
+            transition: box-shadow 0.4s, transform 0.3s;
+            font-size: 16px;
+        }
+
+        input:focus, button:hover {
+            box-shadow: 0 0 15px #FFD700, 0 0 30px #FFD700;
+            transform: scale(1.05);
+        }
+
+        #map {
+            height: 400px;
+            margin-top: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.6);
+        }
+
+        .info {
+            background-color: rgba(34, 34, 34, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* Loading Screen Styles */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #FFD700;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            font-size: 24px;
+            text-shadow: 0 0 30px #FFD700;
+            <speed:0>12</speed:0>
+            border-radios:10px
+        }
+
+        .loading-image {
+            width: 100px;
+            margin-right: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="particles-js"></div>
+
+    <div id="loading">
+        <img src="https://loading.io/spinners/image.png" alt="Loading" class="loading-image">
+        کەمێک چاورێ بکە ...
+    </div>
+
+    <div class="container">
+        <h1><i class="fas fa-search-location"></i> ZHTRACKER
+        لە دۆخی بێتا</h1>
+        <input type="text" id="input" placeholder="Enter IP, Phone Number, or Subdomain" required>
+        <button id="track-btn">تراک</button>
+        <button id="current-location-btn">زانینی شوینی خۆم!</button>
+        <button id="clear-btn">پاکردنەوە</button>
+        <button id="clear-history-btn">سرینەوەی تۆمارەکانم</button>
+        
+        <select id="map-style-select">
+            <option value="standard">ماپی ئاسای</option>
+            <option value="satellite">ماپی سەتەلایت</option>
+        </select>
+        
+        <button id="save-location-btn">خەزنکردنی شوێنەکەم </button>
+        <button id="share-location-btn">هاوبەشی کردنی شوێن</button>
+        <button id="send-email-btn">ناردنی ئاگاداری لەرێی یمەیل</button>
+
+        <div class="status" id="status"></div>
+
+        <div class="info" id="device-info">
+            <h3>زانیاری ئامێرەکەم</h3>
+            <p><strong>براوسەر:</strong> <span id="browser"></span></p>
+            <p><strong>جۆری سیستەم:</strong> <span id="os"></span></p>
+            <p><strong>قەبارەی شاشە:</strong> <span id="screen"></span></p>
+            <p><strong>ئایپی ئەدرێسەکەت:</strong> <span id="user-ip"></span></p>
+        </div>
+
+        <div class="info" id="results">
+            <h3>ئاشکراکرنی زانیاری</h3>
+            <p>No data yet. Search to begin.</p>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
+    <script>
+        // Particles.js Configuration
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 100, density: { enable: true, value_area: 800 } },
+                color: { value: "#FFD700" },
+                shape: { type: "circle" },
+                opacity: { value: 0.5, random: true },
+                size: { value: 4, random: true },
+                line_linked: { enable: true, color: "#FFD700" },
+                move: { enable: true, speed: 2 }
+            },
+            interactivity: {
+                events: { onhover: { enable: true, mode: "repulse" } }
+            }
+        });
+
+        // Initialize the map
+        const map = L.map('map').setView([33.3152, 44.3661], 6);
+        let marker;
+        let locationHistory = [];
+        let savedLocations = [];
+
+        // Load standard tile layer
+        let currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19, attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Load satellite tile layer
+        const satelliteTileLayer = L.tileLayer('https://{s}.google.com/mt?x={x}&y={y}&z={z}&s=Galileo', {
+            maxZoom: 19, attribution: '© Google'
+        });
+
+        // Change map style
+        document.getElementById('map-style-select').addEventListener('change', function () {
+            const style = this.value;
+            if (style === 'satellite') {
+                map.removeLayer(currentTileLayer);
+                satelliteTileLayer.addTo(map);
+            } else {
+                map.removeLayer(satelliteTileLayer);
+                currentTileLayer.addTo(map);
+            }
+        });
+
+        // Show loading screen
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+
+        // Hide loading screen
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Fetch IP Data
+        async function fetchIPData(input) {
+            showLoading();
+            try {
+                const response = await fetch(`https://ipinfo.io/${input}/json`);
+                const data = await response.json();
+                hideLoading();
+                updateResults(data);
+                if (data.loc) {
+                    const [lat, lon] = data.loc.split(',');
+                    updateMap(lat, lon);
+                } else {
+                    document.getElementById('status').textContent = 'Location not found!';
+                }
+            } catch (error) {
+                hideLoading();
+                document.getElementById('status').textContent = 'Error fetching data!';
+            }
+        }
+
+        // Update Results
+        function updateResults(data) {
+            const { ip, city, region, country, loc } = data;
+            const [lat, lon] = loc ? loc.split(',') : [null, null];
+
+            document.getElementById('results').innerHTML = `
+                <h3>Tracking Information</h3>
+                <p><strong>IP Address:</strong> ${ip || 'N/A'}</p>
+                <p><strong>Location:</strong> ${city || 'N/A'}, ${region || 'N/A'}</p>
+                <p><strong>Country:</strong> ${country || 'N/A'}</p>
+                <p><strong>Latitude:</strong> ${lat || 'N/A'}</p>
+                <p><strong>Longitude:</strong> ${lon || 'N/A'}</p>
+            `;
+        }
+
+        // Update Map
+        function updateMap(lat, lon) {
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            marker = L.marker([lat, lon]).addTo(map);
+            map.setView([lat, lon], 15);
+        }
+
+        // Get Current Location
+        document.getElementById('current-location-btn').onclick = () => {
+            showLoading();
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    hideLoading();
+                    updateMap(lat, lon);
+                }, () => {
+                    hideLoading();
+                    alert('توانای دزینی شوێنەکتم نیە .');
+                });
+            } else {
+                hideLoading();
+                alert('جیۆ لۆکەی شن بۆ ئەم براوسەرە کارناکات image.png.');
+            }
+        }
+
+        // Track Input
+        document.getElementById('track-btn').onclick = () => {
+            const input = document.getElementById('input').value.trim();
+            if (input) fetchIPData(input);
+            else alert('Please enter a valid IP, Phone Number, or Subdomain.');
+        };
+
+        // Save Location
+        document.getElementById('save-location-btn').onclick = () => {
+            const currentCoords = marker ? marker.getLatLng() : null;
+            if (currentCoords) {
+                savedLocations.push(currentCoords);
+                alert(`داتای شوێنەکەت بەسەرکەوتوی خەزنکرا image.png: Lat: ${currentCoords.lat}, Lon: ${currentCoords.lng}`);
+            } else {
+                alert('No current location to saveimage.png.');
+            }
+        };
+
+        // Share Location
+        document.getElementById('share-location-btn').onclick = () => {
+            const currentCoords = marker ? marker.getLatLng() : null;
+            if (currentCoords) {
+                const shareLink = `https://maps.google.com/?q=${currentCoords.lat},${currentCoords.lng}`;
+                navigator.clipboard.writeText(shareLink).then(() => {
+                    alert(`Location link copied to clipboard: ${shareLink}`);
+                });
+            } else {
+                alert('No current location to share.');
+            }
+        };
+
+        // Send Email Notification (Placeholder for Integration)
+        document.getElementById('send-email-btn').onclick = () => {
+            const email = prompt('Enter your email address for notifications:');
+            if (email) {
+                alert(`Email notification setup for ${email}.`);
+                // Placeholder: Integrate with an email service here (e.g., EmailJS, SMTP)
+            }
+        };
+
+        // Clear Button
+        document.getElementById('clear-btn').onclick = () => {
+            if (marker) {
+                map.removeLayer(marker);
+                marker = null;
+            }
+            document.getElementById('results').innerHTML = `<h3>Tracking Information</h3><p>No data yet. Search to begin.</p>`;
+        };
+
+        // Clear History
+        document.getElementById('clear-history-btn').onclick = () => {
+            locationHistory = [];
+            alert('Location history cleared!');
+        };
+
+        // Get Device Info
+        function getDeviceInfo() {
+            const userAgent = navigator.userAgent;
+            const ipInfo = document.getElementById('user-ip');
+            ipInfo.textContent = "Fetching your IP...";
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    ipInfo.textContent = data.ip;
+                    document.getElementById('browser').textContent = userAgent;
+                    document.getElementById('os').textContent = getOS();
+                    document.getElementById('screen').textContent = `${window.screen.width} x ${window.screen.height}`;
+                });
+        }
+
+        // Determine Operating System
+        function getOS() {
+            const userAgent = navigator.userAgent;
+            if (userAgent.indexOf("Win") !== -1) return "Windows";
+            if (userAgent.indexOf("Mac") !== -1) return "MacOS";
+            if (userAgent.indexOf("X11") !== -1 || userAgent.indexOf("Linux") !== -1) return "Linux";
+            return "Unknown OS";
+        }
+
+        // Initialize
+        getDeviceInfo();
+    </script>
+</body>
+</html>
